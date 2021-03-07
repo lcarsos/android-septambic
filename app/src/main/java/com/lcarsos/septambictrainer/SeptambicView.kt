@@ -5,6 +5,7 @@ import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.Paint
 import android.util.AttributeSet
+import android.view.MotionEvent
 import android.view.View
 
 val COLORS = listOf(
@@ -23,22 +24,33 @@ val COLORS = listOf(
 class SeptambicView(context: Context, attrs: AttributeSet): View(context, attrs) {
 
     val paint: Paint = Paint()
+    val touches: MutableList<Pair<Float, Float>> = mutableListOf()
+
+    override fun onTouchEvent(event: MotionEvent?): Boolean {
+        super.onTouchEvent(event)
+        val action = event!!.actionMasked
+
+        when (action) {
+            MotionEvent.ACTION_DOWN -> touches.add(Pair(event.getX(0), event.getY(0)))
+//            MotionEvent.ACTION_UP ->
+        }
+
+        this.postInvalidate()
+        return true
+    }
 
     override fun onDraw(canvas: Canvas) {
         super.onDraw(canvas)
 
-
-        val BLACK = Color.parseColor("#FFFF0000")
-        val DARKBLUE = -0x559934
-        val BLUE = Color.parseColor("#AA66CCFF")
-        val color = 0x00_ff_ff
-        paint.setColor(DARKBLUE)
-        canvas.drawCircle(100f, 150f, 50f, paint)
-        paint.color = BLACK
-        canvas.drawCircle(225f, 225f, 10f, paint)
-        paint.color = BLUE
+        paint.color = COLORS[0]
         canvas.drawCircle(250f, 250f, 55f, paint)
 
+        for(point in touches) {
+            drawCircle(canvas, point)
+        }
+    }
 
+    fun drawCircle(canvas: Canvas, touch: Pair<Float, Float>) {
+        canvas.drawCircle(touch.first, touch.second, 50f, paint)
     }
 }
