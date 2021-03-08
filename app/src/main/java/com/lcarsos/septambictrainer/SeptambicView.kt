@@ -4,6 +4,7 @@ import android.content.Context
 import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.Paint
+import android.graphics.Point
 import android.util.AttributeSet
 import android.view.MotionEvent
 import android.view.View
@@ -23,34 +24,74 @@ val COLORS = listOf(
 
 class SeptambicView(context: Context, attrs: AttributeSet): View(context, attrs) {
 
-    val paint: Paint = Paint()
-    val touches: MutableList<Pair<Float, Float>> = mutableListOf()
+    val bubblePaint = Paint()
+    val blackPaint = Paint()
+    val greenPaint = Paint()
+    val touches: MutableList<Point> = mutableListOf()
+    val hand = HandTracker()
 
+    val actionIndexToFingerMap = HashMap<Int, FingerTracker?>()
+
+    init {
+        bubblePaint.color = COLORS[0]
+        blackPaint.color = Color.BLACK
+        blackPaint.style = Paint.Style.STROKE
+        greenPaint.color = Color.GREEN
+        greenPaint.style = Paint.Style.STROKE
+    }
+
+    /**
+     * Note to all brain damaged people out there:
+     * Every time a motion event occurs, you get all of the data for all of the touch points, not
+     * just the one that caused this event. Because of that, there is a "pointer" indirection which
+     * is a little bit confusing because "pointer" is a term for memory management, but in this case
+     * it means the meat sausages poking the screen.
+     *
+     * actionIndex is the position in the array of pointer data. Array is the key word here.
+     * actionIndex === pointerIndex
+     * pointerId is the ID number of the finger on the screen. They use a real array to map to the
+     * sparse array they want you to think of.
+     *
+     */
     override fun onTouchEvent(event: MotionEvent?): Boolean {
         super.onTouchEvent(event)
         val action = event!!.actionMasked
+        val actionIndex = event.actionIndex
+        val pointerId = event.getPointerId(actionIndex)
 
         when (action) {
-            MotionEvent.ACTION_DOWN -> touches.add(Pair(event.getX(0), event.getY(0)))
-//            MotionEvent.ACTION_UP ->
+            MotionEvent.ACTION_DOWN, MotionEvent.ACTION_POINTER_DOWN -> {
+                val touch = Point(event.getX(actionIndex).toInt(), event.getY(actionIndex).toInt())
+                actionIndexToFingerMap[pointerId] = hand.registerTouch(touch)
+                this.postInvalidate()
+            }
+            MotionEvent.ACTION_UP, MotionEvent.ACTION_POINTER_UP -> {
+                actionIndexToFingerMap[pointerId]?.fingerUp()
+                actionIndexToFingerMap[pointerId] = null
+                this.postInvalidate()
+            }
         }
 
-        this.postInvalidate()
         return true
     }
 
     override fun onDraw(canvas: Canvas) {
         super.onDraw(canvas)
 
-        paint.color = COLORS[0]
-        canvas.drawCircle(250f, 250f, 55f, paint)
 
-        for(point in touches) {
-            drawCircle(canvas, point)
+        val fingers = hand.trackedFingers()
+        for ((index, finger) in fingers.withIndex()) {
+            for (touch in finger.touches) {
+                drawCircle(canvas, touch, COLORS[index])
+            }
+        }
+        for (finger in fingers) {
+            canvas.drawRect(finger.fingerBounds!!, if (finger.active) greenPaint else blackPaint)
         }
     }
 
-    fun drawCircle(canvas: Canvas, touch: Pair<Float, Float>) {
-        canvas.drawCircle(touch.first, touch.second, 50f, paint)
+    fun drawCircle(canvas: Canvas, touch: Point, color: Int) {
+        bubblePaint.color = color
+        canvas.drawCircle(touch.x.toFloat(), touch.y.toFloat(), 30f, bubblePaint)
     }
 }
