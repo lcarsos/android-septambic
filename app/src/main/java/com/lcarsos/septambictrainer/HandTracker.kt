@@ -4,11 +4,16 @@ import android.graphics.Point
 import android.graphics.Rect
 
 class HandTracker {
-    private val pinky = FingerTracker()
-    private val ring = FingerTracker()
-    private val middle = FingerTracker()
-    private val index = FingerTracker()
-    private val center = FingerTracker()
+    private val pinky = FingerTracker(1 shl 0)
+    private val ring = FingerTracker(1 shl 1)
+    private val middle = FingerTracker(1 shl 2)
+    private val index = FingerTracker(1 shl 3)
+
+    private val center = FingerTracker(1 shl 4)
+    private val near = FingerTracker(1 shl 5)
+    private val far = FingerTracker(1 shl 6)
+
+    private var _value = 0
 
     enum class TouchType {
         NEW_FINGER,
@@ -38,44 +43,48 @@ class HandTracker {
                 center.fingerDown(point)
                 return center
             }
-            else -> {
-                if (pinky.setupOnce(point)) {
-                    return pinky
-                } else if (ring.setupOnce(point)) {
-                    return ring
-                } else if (middle.setupOnce(point)) {
-                    return middle
-                } else if (index.setupOnce(point)) {
-                    return index
-                } else if (center.setupOnce(point)) {
-                    return center
-                } else {
-                    return null
-                }
+            near.sameFinger(point) -> {
+                near.fingerDown(point)
+                return near
             }
+            far.sameFinger(point) -> {
+                far.fingerDown(point)
+                return far
+            }
+            pinky.setupOnce(point) -> return pinky
+            ring.setupOnce(point) -> return ring
+            middle.setupOnce(point) -> return middle
+            index.setupOnce(point) -> return index
+            center.setupOnce(point) -> return center
+            near.setupOnce(point) -> return near
+            far.setupOnce(point) -> return far
+            else -> return null
         }
     }
 
     fun trackedFingers(): List<FingerTracker> {
-        return listOf(pinky, ring, middle, index, center).filter { i -> i.fingerBounds != null }
+        return listOf(pinky, ring, middle, index, near, center, far).filter { i -> i.fingerBounds != null }
     }
 }
 
-class FingerTracker {
+class FingerTracker(val bitmask: Int) {
     var fingerBounds: Rect? = null
     lateinit var centroid: Point
     var active = false
     var touches = mutableListOf<Point>()
 
     fun sameFinger(point: Point): Boolean {
-        return if (fingerBounds != null) fingerBounds!!.contains(point.x, point.y) else false
+        return fingerBounds?.contains(point.x, point.y) ?: false
     }
 
     fun setupOnce(point: Point): Boolean {
         if (fingerBounds != null) {
             return false
         }
-        fingerBounds = Rect(point.x - 50, point.y - 75, point.x + 50, point.y + 75)
+        fingerBounds = Rect(point.x - 50,
+            point.y - 75,
+            point.x + 50,
+            point.y + 75)
         centroid = point
 
         fingerDown(point)

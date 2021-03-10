@@ -27,7 +27,6 @@ class SeptambicView(context: Context, attrs: AttributeSet): View(context, attrs)
     val bubblePaint = Paint()
     val blackPaint = Paint()
     val greenPaint = Paint()
-    val touches: MutableList<Point> = mutableListOf()
     val hand = HandTracker()
 
     val actionIndexToFingerMap = HashMap<Int, FingerTracker?>()
@@ -70,15 +69,13 @@ class SeptambicView(context: Context, attrs: AttributeSet): View(context, attrs)
                 actionIndexToFingerMap[pointerId] = null
                 this.postInvalidate()
             }
+            else -> return false
         }
-
         return true
     }
 
     override fun onDraw(canvas: Canvas) {
         super.onDraw(canvas)
-
-
         val fingers = hand.trackedFingers()
         for ((index, finger) in fingers.withIndex()) {
             for (touch in finger.touches) {
