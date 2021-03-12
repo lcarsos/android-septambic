@@ -13,12 +13,22 @@ class HandTracker {
     private val near = FingerTracker(1 shl 5)
     private val far = FingerTracker(1 shl 6)
 
-    private var _value = 0
+//    private var _value = 0
 
     enum class TouchType {
         NEW_FINGER,
         EXISTING_FINGER,
         BAD_TOUCH
+    }
+
+    fun getValue(): KeyerValue {
+        return KeyerValue.valueOf((if (pinky.active) pinky.bitmask else 0) and
+                (if (ring.active) ring.bitmask else 0) and
+                (if (middle.active) middle.bitmask else 0) and
+                (if (index.active) index.bitmask else 0) and
+                (if (center.active) center.bitmask else 0) and
+                (if (near.active) near.bitmask else 0) and
+                (if (far.active) far.bitmask else 0))
     }
 
     fun registerTouch(point: Point): FingerTracker? {
